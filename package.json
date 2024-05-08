@@ -7,9 +7,7 @@
     "dev": "nodemon ./src/server.js",
     "migrate": "knex migrate:latest"
   },
-  "author": "Valdeir Alves Barbosa",
-  "license": "ISC",
-  "description": "API developed in Explorer Rocketseat",
+  "author": "Humberto Galdino",
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "express": "^4.18.2",
