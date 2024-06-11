@@ -1,33 +1,26 @@
 const { Router } = require("express");
+const multer = require("multer");
+const uploadConfig = require("../configs/upload");
 
-const UserController = require("../controllers/UsersController");
-const ValidateEmail = require('../utils/ValidateEmail')
-const AppError = require('../utils/AppError')
+const UsersController = require("../controllers/UsersController");
+const UserAvatarController = require("../controllers/UserAvatarController");
+const ensureAuthenticated = require("../middlewares/ensureAuthenticated");
 
-const userRoutes = Router();
+const usersRoutes = Router();
+const upload = multer(uploadConfig.MULTER);
 
+const usersController = new UsersController();
+const userAvatarController = new UserAvatarController();
 
-function middlewareValidateEmail(request, response, next) {
-  const { email } = request.body
-  if (!email) {
-    throw new AppError(`The email is required!`,401)
-  }
-  if (!ValidateEmail(email)) {
-    throw new AppError(`The email ${email} is not a valid email!`,401)
-  }
-  next()
+usersRoutes.get("/", usersController.index);
+usersRoutes.post("/", usersController.create);
+usersRoutes.put("/", ensureAuthenticated, usersController.update);
+usersRoutes.patch(
+  "/avatar",
+  ensureAuthenticated,
+  upload.single("avatar"),
+  userAvatarController.update
+);
+usersRoutes.delete("/:id", ensureAuthenticated, usersController.drop);
 
-}
-
-const userController = new UserController()
-
-
-
-userRoutes.post("/", middlewareValidateEmail, userController.create)
-userRoutes.put("/:id", middlewareValidateEmail,userController.update)
-userRoutes.get("/:user_id", userController.show)
-userRoutes.delete("/:id", userController.drop)
-userRoutes.get("/", userController.index)
-
-
-module.exports = userRoutes
+module.exports = usersRoutes;

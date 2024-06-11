@@ -3,9 +3,8 @@ const knex = require("../database/knex");
 const AppError = require("../utils/AppError");
 const sqliteConnection = require("../database/sqlite");
 
-class UserController {
+class UsersController {
   async create(request, response) {
-    console.log("passou aqui");
     const { name, email, password } = request.body;
     const database = await sqliteConnection();
 
@@ -32,65 +31,58 @@ class UserController {
   }
 
   async update(request, response) {
-    const { name, email, password, oldPassword } = request.body;
-    const { id } = request.params;
+    const { name, email, password, old_password } = request.body;
+    const user_id = request.user.id;
 
     const database = await sqliteConnection();
-    const user = await database.get("SELECT * FROM users WHERE id = (?)", [id]);
+    const user = await database.get("SELECT * FROM users WHERE id = (?)", [
+      user_id,
+    ]);
 
     if (!user) {
-      throw new AppError("User not found", 404);
+      throw new AppError("Usuário não encontrado.");
     }
 
     const userWithUpdatedEmail = await database.get(
-      "SELECT * FROM users WHERE email= (?)",
+      "SELECT * FROM users WHERE email = (?)",
       [email]
     );
 
     if (userWithUpdatedEmail && userWithUpdatedEmail.id !== user.id) {
-      throw new AppError(
-        "A senha atual não corresponde. Verifique sua senha atual e tente novamente",
-        404
-      );
+      throw new AppError("Este e-mail já está em uso.");
     }
 
     user.name = name ?? user.name;
     user.email = email ?? user.email;
 
-    if (password && !oldPassword) {
+    if (password && !old_password) {
       throw new AppError(
-        "Você deve informar a senha atual para atualizá-la",
-        401
+        "Você precisa informar a senha antiga para definir a nova senha."
       );
     }
 
-    if (password && oldPassword) {
-      const checkOldPassword = await compare(oldPassword, user.password);
+    if (password && old_password) {
+      const checkOldPassword = await compare(old_password, user.password);
+
       if (!checkOldPassword) {
-        throw new AppError(
-          "A senha atual não corresponde. Verifique sua senha atual e tente novamente",
-          401
-        );
+        throw new AppError("A senha antiga não confere.");
       }
 
       user.password = await hash(password, 8);
     }
 
     await database.run(
-      `UPDATE users SET 
-        name = ?,  
-        email = ?, 
-        password = ?,
-        updated_at = DATETIME("now","LOCALTIME"
-        )
-        WHERE id = ?`,
-      [user.name, user.email, user.password, user.id]
+      `
+            UPDATE users SET
+            name = ?,
+            email = ?,
+            password = ?,
+            updated_at = DATETIME('now')
+            WHERE id = ?`,
+      [user.name, user.email, user.password, user_id]
     );
 
-    return response.status(201).json({
-      status: "SUCCESS.",
-      message: `O(a) usuário(a) ${user.name} foi atualizado com sucesso!`,
-    });
+    return response.status(200).json();
   }
 
   async index(request, response) {
@@ -134,4 +126,4 @@ class UserController {
   }
 }
 
-module.exports = UserController;
+module.exports = UsersController;
